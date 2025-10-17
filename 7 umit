@@ -1,0 +1,259 @@
+
+
+from abc import ABC, abstractmethod
+
+# ICommand interface
+class ICommand(ABC):
+    @abstractmethod
+    def execute(self):
+        pass
+
+    @abstractmethod
+    def undo(self):
+        pass
+
+# Receivers
+class Light:
+    def __init__(self, location):
+        self.location = location
+        self.is_on = False
+
+    def on(self):
+        self.is_on = True
+        print(f"[Light] {self.location} light turned ON.")
+
+    def off(self):
+        self.is_on = False
+        print(f"[Light] {self.location} light turned OFF.")
+
+
+class Door:
+    def __init__(self, name):
+        self.name = name
+        self.is_open = False
+
+    def open(self):
+        self.is_open = True
+        print(f"[Door] {self.name} door OPENED.")
+
+    def close(self):
+        self.is_open = False
+        print(f"[Door] {self.name} door CLOSED.")
+
+
+class Thermostat:
+    def __init__(self, temperature=22):
+        self.temperature = temperature
+
+    def increase(self, delta):
+        self.temperature += delta
+        print(f"[Thermostat] Temperature increased to {self.temperature}°C.")
+
+    def decrease(self, delta):
+        self.temperature -= delta
+        print(f"[Thermostat] Temperature decreased to {self.temperature}°C.")
+
+
+# Concrete Commands
+class LightOnCommand(ICommand):
+    def __init__(self, light):
+        self.light = light
+
+    def execute(self):
+        self.light.on()
+
+    def undo(self):
+        self.light.off()
+
+
+class LightOffCommand(ICommand):
+    def __init__(self, light):
+        self.light = light
+
+    def execute(self):
+        self.light.off()
+
+    def undo(self):
+        self.light.on()
+
+
+class DoorOpenCommand(ICommand):
+    def __init__(self, door):
+        self.door = door
+
+    def execute(self):
+        self.door.open()
+
+    def undo(self):
+        self.door.close()
+
+
+class DoorCloseCommand(ICommand):
+    def __init__(self, door):
+        self.door = door
+
+    def execute(self):
+        self.door.close()
+
+    def undo(self):
+        self.door.open()
+
+
+class IncreaseTempCommand(ICommand):
+    def __init__(self, thermostat, delta):
+        self.thermostat = thermostat
+        self.delta = delta
+
+    def execute(self):
+        self.thermostat.increase(self.delta)
+
+    def undo(self):
+        self.thermostat.decrease(self.delta)
+
+
+# Invoker class
+class Invoker:
+    def __init__(self):
+        self.history = []
+
+    def execute_command(self, command):
+        command.execute()
+        self.history.append(command)
+
+    def undo_last(self):
+        if not self.history:
+            print("No commands to undo.")
+            return
+        command = self.history.pop()
+        command.undo()
+
+
+# TEMPLATE METHOD PATTERN: Beverage Preparation
+
+class Beverage(ABC):
+    def prepare_recipe(self):
+        self.boil_water()
+        self.brew()
+        self.pour_in_cup()
+        if self.customer_wants_condiments():
+            self.add_condiments()
+
+    def boil_water(self):
+        print("Boiling water...")
+
+    def pour_in_cup(self):
+        print("Pouring into cup...")
+
+    @abstractmethod
+    def brew(self):
+        pass
+
+    @abstractmethod
+    def add_condiments(self):
+        pass
+
+    def customer_wants_condiments(self):
+        return True
+
+
+class Tea(Beverage):
+    def brew(self):
+        print("Steeping the tea...")
+
+    def add_condiments(self):
+        print("Adding lemon...")
+
+
+class Coffee(Beverage):
+    def brew(self):
+        print("Dripping coffee through filter...")
+
+    def add_condiments(self):
+        print("Adding sugar and milk...")
+
+    def customer_wants_condiments(self):
+        choice = input("Would you like milk and sugar? (y/n): ").lower()
+        return choice == 'y'
+
+
+# MEDIATOR PATTERN: Chat Room System
+
+class Mediator(ABC):
+    @abstractmethod
+    def send_message(self, sender, message, receiver=None):
+        pass
+
+
+class ChatRoom(Mediator):
+    def __init__(self):
+        self.participants = {}
+
+    def register(self, user):
+        self.participants[user.name] = user
+        user.chatroom = self
+        self.broadcast("System", f"{user.name} joined the chat.")
+
+    def send_message(self, sender, message, receiver=None):
+        if receiver:
+            if receiver.name in self.participants:
+                print(f"[Private] {sender.name} to {receiver.name}: {message}")
+            else:
+                print(f"User {receiver.name} not found.")
+        else:
+            self.broadcast(sender.name, message)
+
+    def broadcast(self, sender_name, message):
+        for user in self.participants.values():
+            if user.name != sender_name:
+                print(f"[{sender_name}] to all: {message}")
+
+
+class User:
+    def __init__(self, name):
+        self.name = name
+        self.chatroom = None
+
+    def send(self, message, receiver=None):
+        if not self.chatroom:
+            print(f"{self.name} is not in a chat room!")
+            return
+        self.chatroom.send_message(self, message, receiver)
+
+
+# DEMONSTRATION
+if __name__ == "__main__":
+    print("\n=== COMMAND PATTERN DEMO ===")
+    light = Light("Living Room")
+    door = Door("Front")
+    thermostat = Thermostat()
+
+    invoker = Invoker()
+    invoker.execute_command(LightOnCommand(light))
+    invoker.execute_command(DoorOpenCommand(door))
+    invoker.execute_command(IncreaseTempCommand(thermostat, 2))
+    invoker.undo_last()
+
+    print("\n=== TEMPLATE METHOD DEMO ===")
+    tea = Tea()
+    coffee = Coffee()
+
+    print("\nPreparing Tea:")
+    tea.prepare_recipe()
+
+    print("\nPreparing Coffee:")
+    coffee.prepare_recipe()
+
+    print("\n=== MEDIATOR PATTERN DEMO ===")
+    chatroom = ChatRoom()
+
+    alice = User("Alice")
+    bob = User("Bob")
+    carol = User("Carol")
+
+    chatroom.register(alice)
+    chatroom.register(bob)
+    chatroom.register(carol)
+
+    alice.send("Hi everyone!")
+    bob.send("Hey Alice!", receiver=alice)
+    carol.send("Good to see you all.")
